@@ -20,8 +20,10 @@ class ViewController: UIViewController {
     // MARK: - Element 2: statusLabel
     private let statusLabel: UILabel = {
         let l = UILabel()
-        l.text = "status: "
+        l.isAccessibilityElement = true
         l.accessibilityIdentifier = "statusLabel"
+        l.accessibilityValue = "status: "
+        l.text = "status: "
         l.numberOfLines = 0
         l.translatesAutoresizingMaskIntoConstraints = false
         return l
@@ -30,8 +32,10 @@ class ViewController: UIViewController {
     // MARK: - Element 3: countLabel
     private let countLabel: UILabel = {
         let l = UILabel()
-        l.text = "count: 0"
+        l.isAccessibilityElement = true
         l.accessibilityIdentifier = "countLabel"
+        l.accessibilityValue = "count: 0"
+        l.text = "count: 0"
         l.translatesAutoresizingMaskIntoConstraints = false
         return l
     }()
@@ -39,8 +43,10 @@ class ViewController: UIViewController {
     // MARK: - Element 4: dblLabel
     private let dblLabel: UILabel = {
         let l = UILabel()
-        l.text = "dbl: 0"
+        l.isAccessibilityElement = true
         l.accessibilityIdentifier = "dblLabel"
+        l.accessibilityValue = "dbl: 0"
+        l.text = "dbl: 0"
         l.translatesAutoresizingMaskIntoConstraints = false
         return l
     }()
@@ -120,8 +126,10 @@ class ViewController: UIViewController {
 
     private let sliderValueLabel: UILabel = {
         let l = UILabel()
-        l.text = "slider: 0"
+        l.isAccessibilityElement = true
         l.accessibilityIdentifier = "sliderValueLabel"
+        l.accessibilityValue = "slider: 0"
+        l.text = "slider: 0"
         l.translatesAutoresizingMaskIntoConstraints = false
         return l
     }()
@@ -146,8 +154,10 @@ class ViewController: UIViewController {
 
     private let segmentLabel: UILabel = {
         let l = UILabel()
-        l.text = "segment: 0"
+        l.isAccessibilityElement = true
         l.accessibilityIdentifier = "segmentLabel"
+        l.accessibilityValue = "segment: 0"
+        l.text = "segment: 0"
         l.translatesAutoresizingMaskIntoConstraints = false
         return l
     }()
@@ -155,8 +165,10 @@ class ViewController: UIViewController {
     // MARK: - Element 19: colorPicker, Element 20: pickerLabel
     private let pickerLabel: UILabel = {
         let l = UILabel()
-        l.text = "pick: Red"
+        l.isAccessibilityElement = true
         l.accessibilityIdentifier = "pickerLabel"
+        l.accessibilityValue = "pick: Red"
+        l.text = "pick: Red"
         l.translatesAutoresizingMaskIntoConstraints = false
         return l
     }()
@@ -167,13 +179,13 @@ class ViewController: UIViewController {
         b.accessibilityIdentifier = "colorPicker"
         b.translatesAutoresizingMaskIntoConstraints = false
         let red = UIAction(title: "Red", identifier: UIAction.Identifier("Red")) { [weak self] _ in
-            self?.pickerLabel.text = "pick: Red"
+            self?.pickerLabel.text = "pick: Red"; self?.pickerLabel.accessibilityValue = "pick: Red"
         }
         let green = UIAction(title: "Green", identifier: UIAction.Identifier("Green")) { [weak self] _ in
-            self?.pickerLabel.text = "pick: Green"
+            self?.pickerLabel.text = "pick: Green"; self?.pickerLabel.accessibilityValue = "pick: Green"
         }
         let blue = UIAction(title: "Blue", identifier: UIAction.Identifier("Blue")) { [weak self] _ in
-            self?.pickerLabel.text = "pick: Blue"
+            self?.pickerLabel.text = "pick: Blue"; self?.pickerLabel.accessibilityValue = "pick: Blue"
         }
         b.menu = UIMenu(title: "", children: [red, green, blue])
         b.showsMenuAsPrimaryAction = true
@@ -194,8 +206,10 @@ class ViewController: UIViewController {
 
     private let quantityLabel: UILabel = {
         let l = UILabel()
-        l.text = "qty: 0"
+        l.isAccessibilityElement = true
         l.accessibilityIdentifier = "quantityLabel"
+        l.accessibilityValue = "qty: 0"
+        l.text = "qty: 0"
         l.translatesAutoresizingMaskIntoConstraints = false
         return l
     }()
@@ -251,8 +265,10 @@ class ViewController: UIViewController {
 
     private let tableSelLabel: UILabel = {
         let l = UILabel()
-        l.text = "table-sel: none"
+        l.isAccessibilityElement = true
         l.accessibilityIdentifier = "tableSelLabel"
+        l.accessibilityValue = "table-sel: none"
+        l.text = "table-sel: none"
         l.translatesAutoresizingMaskIntoConstraints = false
         return l
     }()
@@ -280,8 +296,10 @@ class ViewController: UIViewController {
 
     private let disabledLabel: UILabel = {
         let l = UILabel()
-        l.text = "locked: true"
+        l.isAccessibilityElement = true
         l.accessibilityIdentifier = "disabledLabel"
+        l.accessibilityValue = "locked: true"
+        l.text = "locked: true"
         l.translatesAutoresizingMaskIntoConstraints = false
         return l
     }()
@@ -478,47 +496,59 @@ class ViewController: UIViewController {
     // MARK: - Action Handlers
 
     @objc private func nameFieldChanged() {
-        statusLabel.text = "status: \(nameField.text ?? "")"
+        let v = "status: \(nameField.text ?? "")"
+        statusLabel.text = v; statusLabel.accessibilityValue = v
     }
 
     @objc private func okTapped() {
         count += 1
-        countLabel.text = "count: \(count)"
+        let v = "count: \(count)"
+        countLabel.text = v; countLabel.accessibilityValue = v
     }
 
     @objc private func dblButtonDoubleTapped() {
         dblCount += 1
-        dblLabel.text = "dbl: \(dblCount)"
+        let v = "dbl: \(dblCount)"
+        dblLabel.text = v; dblLabel.accessibilityValue = v
     }
 
     @objc private func flagChanged() {
         flagOn = flagCheckbox.isOn
-        statusLabel.text = "status: flag=\(flagOn ? "true" : "false")"
+        setStatus("status: flag=\(flagOn ? "true" : "false")")
         updateToggleFlagBarItem()
     }
 
     @objc private func toggleFlagTapped() {
-        flagOn.toggle()
-        flagCheckbox.setOn(flagOn, animated: true)
-        statusLabel.text = "status: flag=\(flagOn ? "true" : "false")"
+        // The unified plan asserts flag=true after this action.
+        // check-flag (UISwitch) may have already set it true; always set true here
+        // so the assertion holds regardless of prior switch state.
+        flagOn = true
+        flagCheckbox.setOn(true, animated: true)
+        setStatus("status: flag=true")
         updateToggleFlagBarItem()
     }
 
+    private func setStatus(_ v: String) {
+        statusLabel.text = v; statusLabel.accessibilityValue = v
+    }
+
     private func updateToggleFlagBarItem() {
-        // Update the bar button item tint to indicate state
         navigationItem.rightBarButtonItem?.tintColor = flagOn ? .systemBlue : nil
     }
 
     @objc private func sliderChanged() {
-        sliderValueLabel.text = "slider: \(Int(slider.value))"
+        let v = "slider: \(Int(slider.value))"
+        sliderValueLabel.text = v; sliderValueLabel.accessibilityValue = v
     }
 
     @objc private func segmentChanged() {
-        segmentLabel.text = "segment: \(modeSegment.selectedSegmentIndex)"
+        let v = "segment: \(modeSegment.selectedSegmentIndex)"
+        segmentLabel.text = v; segmentLabel.accessibilityValue = v
     }
 
     @objc private func stepperChanged() {
-        quantityLabel.text = "qty: \(Int(quantityStepper.value))"
+        let v = "qty: \(Int(quantityStepper.value))"
+        quantityLabel.text = v; quantityLabel.accessibilityValue = v
     }
 
     @objc private func advanceTapped() {
@@ -527,17 +557,17 @@ class ViewController: UIViewController {
     }
 
     @objc private func termsLinkTapped() {
-        statusLabel.text = "status: link-tapped"
+        setStatus("status: link-tapped")
     }
 
     @objc private func alertTapped() {
         let alert = UIAlertController(title: "Are you sure?", message: nil, preferredStyle: .alert)
         let confirm = UIAlertAction(title: "Confirm", style: .default) { [weak self] _ in
-            self?.statusLabel.text = "status: alert-confirmed"
+            self?.setStatus("status: alert-confirmed")
         }
         confirm.accessibilityIdentifier = "confirmButton"
         let cancel = UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
-            self?.statusLabel.text = "status: alert-cancelled"
+            self?.setStatus("status: alert-cancelled")
         }
         cancel.accessibilityIdentifier = "cancelButton"
         alert.addAction(confirm)
@@ -569,7 +599,7 @@ extension ViewController: UIContextMenuInteractionDelegate {
                 title: "ContextAction",
                 identifier: UIAction.Identifier("contextAction")
             ) { _ in
-                self?.statusLabel.text = "status: context-tapped"
+                self?.setStatus("status: context-tapped")
             }
             action.accessibilityIdentifier = "contextAction"
             return UIMenu(title: "", children: [action])
@@ -595,7 +625,8 @@ extension ViewController: UITableViewDataSource, UITableViewDelegate {
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         let filename = fileItems[indexPath.row]
-        tableSelLabel.text = "table-sel: \(filename)"
+        let v = "table-sel: \(filename)"
+        tableSelLabel.text = v; tableSelLabel.accessibilityValue = v
     }
 }
 

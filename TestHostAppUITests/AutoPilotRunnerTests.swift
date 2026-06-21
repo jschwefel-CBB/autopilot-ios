@@ -8,8 +8,6 @@ class AutoPilotRunnerTests: XCTestCase {
 
     func testRunUnifiedPlan() throws {
         let app = XCUIApplication()
-        app.launch()
-
         let runner = AutoPilotRunner(app: app)
         let results = try runner.run()
 
