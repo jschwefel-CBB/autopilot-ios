@@ -11,6 +11,7 @@
 		87DD2A614AF275FED9D09E59 /* AutoPilotRunnerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B112C2769F93AD39519E9A6 /* AutoPilotRunnerTests.swift */; };
 		99477013E8392A0A045EBF9C /* AutoPilotRunner.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA7C7F3730B4EFB959FD8865 /* AutoPilotRunner.swift */; };
 		9D5BA26098EB08B78689BDF1 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 94C00A52D490D11633F94465 /* ContentView.swift */; };
+		A4F2E0228A6A62733BBA1619 /* test-all-capabilities.json in Resources */ = {isa = PBXBuildFile; fileRef = 69FF5E6C063BB685C0170539 /* test-all-capabilities.json */; };
 		BE537D7B4ACB017B6C44E2C0 /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54EB47E5BE410B3EF4335469 /* ViewController.swift */; };
 		C242BDC7B2ACE3D03FAFB2F9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 23335A3FC14F79808B31B434 /* Assets.xcassets */; };
 		C7902ACAE4CDD5F79CBBB8AB /* TestHostAppApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC1BFEE5FA404BB0CD33D32A /* TestHostAppApp.swift */; };
@@ -38,6 +39,7 @@
 		5B112C2769F93AD39519E9A6 /* AutoPilotRunnerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoPilotRunnerTests.swift; sourceTree = "<group>"; };
 		5C4505A156ED2E644A40F82A /* TestHostApp.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = TestHostApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		5C758411F7922DE15B6A2FF2 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		69FF5E6C063BB685C0170539 /* test-all-capabilities.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "test-all-capabilities.json"; sourceTree = "<group>"; };
 		7A8B328D66ADDE00EE4D4F1E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		94C00A52D490D11633F94465 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		B60ADE50A78C1694F47994A7 /* TestHostAppUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = TestHostAppUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -52,6 +54,7 @@
 		4A3D5143221920A4F35FFFBC = {
 			isa = PBXGroup;
 			children = (
+				B456C04F638CE2E73A9E5926 /* Resources */,
 				D6E9486108FB60382385AB94 /* TestHostApp */,
 				BC3C61ED3A5249E9C99857D2 /* TestHostAppSwiftUI */,
 				807E39F99D9C2D19EED7BF09 /* TestHostAppUITests */,
@@ -68,6 +71,15 @@
 				F39A18F9BD56F46AEF31004E /* PlanModel.swift */,
 			);
 			path = TestHostAppUITests;
+			sourceTree = "<group>";
+		};
+		B456C04F638CE2E73A9E5926 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				69FF5E6C063BB685C0170539 /* test-all-capabilities.json */,
+			);
+			name = Resources;
+			path = TestHostAppUITests/Resources;
 			sourceTree = "<group>";
 		};
 		BC3C61ED3A5249E9C99857D2 /* TestHostAppSwiftUI */ = {
@@ -147,6 +159,7 @@
 			buildConfigurationList = 161CF009C4B2633888D4BD57 /* Build configuration list for PBXNativeTarget "TestHostAppUITests" */;
 			buildPhases = (
 				3268E387D4D99C5940A6002B /* Sources */,
+				9806FEE7B33D17D6EBAF48A8 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -201,6 +214,14 @@
 			buildActionMask = 2147483647;
 			files = (
 				3EB4B42BD175BBAE85A00602 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		9806FEE7B33D17D6EBAF48A8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A4F2E0228A6A62733BBA1619 /* test-all-capabilities.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

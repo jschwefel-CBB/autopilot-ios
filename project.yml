@@ -73,8 +73,11 @@ targets:
     deploymentTarget: "16.0"
     sources:
       - path: TestHostAppUITests
-    resources:
-      - path: TestHostAppUITests/test-all-capabilities.json
+        excludes:
+          - "Resources/**"
+      - path: TestHostAppUITests/Resources/test-all-capabilities.json
+        buildPhase: resources
+        type: file
     info:
       path: TestHostAppUITests/Info.plist
       properties:
