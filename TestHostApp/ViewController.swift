@@ -316,6 +316,24 @@ class ViewController: UIViewController {
         setupActions()
         setupContextMenu()
         setupTableView()
+        setupDismissKeyboardGesture()
+    }
+
+    // Tap-to-dismiss so the software keyboard (raised at launch by
+    // searchField.becomeFirstResponder) can be cleared by tapping a neutral
+    // area. Without this the keyboard permanently covers the lower ~216pt on
+    // small screens, leaving bottom controls unhittable. cancelsTouchesInView
+    // is false so this never swallows taps meant for real controls, and it does
+    // not change any value/state the test plan asserts.
+    private func setupDismissKeyboardGesture() {
+        let tap = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboardGesture))
+        tap.cancelsTouchesInView = false
+        tap.requiresExclusiveTouchType = false
+        view.addGestureRecognizer(tap)
+    }
+
+    @objc private func dismissKeyboardGesture() {
+        view.endEditing(true)
     }
 
     override func viewDidAppear(_ animated: Bool) {

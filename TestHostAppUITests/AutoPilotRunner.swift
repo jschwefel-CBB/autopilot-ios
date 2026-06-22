@@ -286,14 +286,7 @@ class AutoPilotRunner {
         if !exists {
             throw RunnerError.elementNotFound(step.id ?? "unnamed")
         }
-        if !element.isHittable {
-            var tries = 0
-            while !element.isHittable && tries < 5 {
-                app.swipeUp()
-                Thread.sleep(forTimeInterval: 0.2)
-                tries += 1
-            }
-        }
+        scrollToHittable(element)
         element.tap()
     }
 
@@ -303,6 +296,7 @@ class AutoPilotRunner {
         if !exists {
             throw RunnerError.elementNotFound(step.id ?? "unnamed")
         }
+        scrollToHittable(element)
         element.doubleTap()
     }
 
@@ -312,6 +306,7 @@ class AutoPilotRunner {
         if !exists {
             throw RunnerError.elementNotFound(step.id ?? "unnamed")
         }
+        scrollToHittable(element)
         element.press(forDuration: 1.5)
     }
 
@@ -322,9 +317,10 @@ class AutoPilotRunner {
         if !exists {
             throw RunnerError.elementNotFound(step.id ?? "unnamed")
         }
+        scrollToHittable(element, keyboardWillShow: true)
         if step.args?.clear == true {
             element.tap()
-            element.clearText()
+            element.clearText(in: app)
         } else {
             element.tap()
         }
@@ -340,10 +336,12 @@ class AutoPilotRunner {
             throw RunnerError.elementNotFound(step.id ?? "unnamed")
         }
         if element.elementType == .slider {
+            scrollToHittable(element)
             element.adjust(toNormalizedSliderPosition: CGFloat(Double(text) ?? 0.5))
         } else {
+            scrollToHittable(element, keyboardWillShow: true)
             element.tap()
-            element.clearText()
+            element.clearText(in: app)
             element.typeText(text)
             dismissKeyboard()
         }
@@ -351,19 +349,27 @@ class AutoPilotRunner {
 
     private func dismissKeyboard() {
         guard app.keyboards.firstMatch.exists else { return }
-        // Try hardware Return/Done key first
-        let returnKey = app.keyboards.buttons["Return"]
-        if returnKey.exists { returnKey.tap(); Thread.sleep(forTimeInterval: 0.2); return }
+        // A "Done" key, when present and hittable, is the cleanest dismissal.
         let doneKey = app.keyboards.buttons["Done"]
-        if doneKey.exists { doneKey.tap(); Thread.sleep(forTimeInterval: 0.2); return }
-        // Tap the status bar area (always above keyboard, never interactive)
-        app.statusBars.firstMatch.tap()
-        Thread.sleep(forTimeInterval: 0.3)
-        // If keyboard still up, swipe it down
-        if app.keyboards.firstMatch.exists {
-            app.swipeDown()
-            Thread.sleep(forTimeInterval: 0.3)
+        if doneKey.exists && doneKey.isHittable {
+            doneKey.tap(); Thread.sleep(forTimeInterval: 0.2)
+            if !app.keyboards.firstMatch.exists { return }
         }
+        // Otherwise tap a neutral EMPTY spot inside the page scroll view — the
+        // left content margin near its top, which holds no control or text field
+        // — to fire the app's tap-to-dismiss gesture (view.endEditing). This is
+        // the only reliable way to clear this app's keyboard: its text fields
+        // have no return-key resign, so tapping the keyboard's own keys (return,
+        // etc.) does NOT dismiss it. Avoid re-raising by never tapping a field.
+        let scroller = pageScrollView()
+        let f = scroller.exists ? scroller.frame : app.windows.firstMatch.frame
+        let neutralX = f.minX + 4                  // left margin: empty scroll bg
+        let neutralY = f.minY + min(f.height * 0.06, 24)
+        app.windows.firstMatch
+            .coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
+            .withOffset(CGVector(dx: neutralX, dy: neutralY))
+            .tap()
+        Thread.sleep(forTimeInterval: 0.3)
     }
 
     private func executeScroll(_ step: Step) throws {
@@ -386,18 +392,248 @@ class AutoPilotRunner {
         if !exists {
             throw RunnerError.elementNotFound(step.id ?? "unnamed")
         }
-        // Scroll element into view if not hittable
-        if !source.isHittable {
-            var tries = 0
-            while !source.isHittable && tries < 5 {
-                app.swipeUp()
-                Thread.sleep(forTimeInterval: 0.2)
-                tries += 1
+        guard let toSel = step.args?.to else {
+            scrollToHittable(source)
+            return
+        }
+        let dest = resolveElement(toSel)
+        _ = dest.waitForExistence(timeout: 5.0)
+        // Both source and dest must be on-screen simultaneously for the drag.
+        // Scroll so that the source is hittable; the dest is laid out adjacent
+        // to the source (same horizontal row), so it lands on-screen too. Then
+        // confirm both are hittable before pressing.
+        scrollToHittable(source)
+        scrollToHittable(dest)
+        // Re-confirm the source survived the dest scroll (a tiny screen may have
+        // nudged it); a final nudge keeps both visible since they share a row.
+        scrollToHittable(source)
+        source.press(forDuration: 0.5, thenDragTo: dest)
+    }
+
+    // MARK: - Scroll Into View
+
+    /// The page-level scroll view that wraps all content. The app also has a
+    /// small inner scroll view (identifier "scrollView", ~120pt tall); we must
+    /// scroll the OUTER one to bring below-the-fold elements into view. Pick the
+    /// scroll view with the largest visible area (the page scroller), preferring
+    /// one without the inner identifier.
+    private func pageScrollView() -> XCUIElement {
+        let scrolls = app.scrollViews
+        let count = scrolls.count
+        guard count > 0 else { return app }
+        var best: XCUIElement?
+        var bestArea: CGFloat = -1
+        for i in 0..<count {
+            let sv = scrolls.element(boundBy: i)
+            guard sv.exists else { continue }
+            let f = sv.frame
+            // Skip the small inner items scroller explicitly when identifiable.
+            if sv.identifier == "scrollView" { continue }
+            let area = f.width * f.height
+            if area > bestArea {
+                bestArea = area
+                best = sv
             }
         }
-        if let toSel = step.args?.to {
-            let dest = resolveElement(toSel)
-            source.press(forDuration: 0.5, thenDragTo: dest)
+        // Fallback: if the only scroll view is the inner one, use it.
+        if best == nil {
+            best = scrolls.firstMatch
+        }
+        return best ?? app
+    }
+
+    /// Frames of views that would intercept a drag meant for the page scroll
+    /// view — other (nested) scroll views and tables, plus the keyboard. A drag
+    /// whose path crosses any of these scrolls THAT view instead of the page, so
+    /// we must steer drags into the gaps between them.
+    private func dragObstacles(excluding pageScroll: XCUIElement) -> [CGRect] {
+        var rects: [CGRect] = []
+        let pageFrame = pageScroll.frame
+
+        func collect(_ query: XCUIElementQuery) {
+            let n = query.count
+            guard n > 0 else { return }
+            for i in 0..<n {
+                let e = query.element(boundBy: i)
+                guard e.exists else { continue }
+                let f = e.frame
+                // Only obstacles that sit inside the page scroller and are
+                // strictly smaller than it (i.e. nested, not the page itself).
+                if f.height < pageFrame.height - 1 && f.intersects(pageFrame) {
+                    rects.append(f)
+                }
+            }
+        }
+        collect(app.scrollViews)
+        collect(app.tables)
+        collect(app.textViews)   // UITextView is scroll-backed; it eats drags too
+
+        let kb = app.keyboards.firstMatch
+        if kb.exists { rects.append(kb.frame) }
+        return rects
+    }
+
+    /// Find a vertical drag segment [startY, endY] inside the page scroller's
+    /// visible area that does NOT cross any obstacle, dragging in `direction`
+    /// (+1 = content up / finger moves up; -1 = content down). Returns nil if no
+    /// safe gap is tall enough.
+    private func safeDragSegment(in pageFrame: CGRect,
+                                 obstacles: [CGRect],
+                                 direction: CGFloat) -> (CGFloat, CGFloat)? {
+        let top = pageFrame.minY + 6
+        let bottom = pageFrame.maxY - 6
+        guard bottom > top else { return nil }
+
+        // Build the list of obstacle [minY,maxY] bands clipped to the viewport,
+        // sorted, then find gaps between them.
+        var bands = obstacles
+            .map { ($0.minY, $0.maxY) }
+            .map { (max($0.0, top), min($0.1, bottom)) }
+            .filter { $0.1 > $0.0 }
+            .sorted { $0.0 < $1.0 }
+
+        // Merge overlapping bands.
+        var merged: [(CGFloat, CGFloat)] = []
+        for b in bands {
+            if let last = merged.last, b.0 <= last.1 + 1 {
+                merged[merged.count - 1] = (last.0, max(last.1, b.1))
+            } else {
+                merged.append(b)
+            }
+        }
+        bands = merged
+
+        // Collect gaps (free vertical ranges) between obstacle bands.
+        var gaps: [(CGFloat, CGFloat)] = []
+        var cursor = top
+        for b in bands {
+            if b.0 - cursor > 1 { gaps.append((cursor, b.0)) }
+            cursor = max(cursor, b.1)
+        }
+        if bottom - cursor > 1 { gaps.append((cursor, bottom)) }
+
+        // Pick the tallest gap; need a minimum travel to scroll meaningfully.
+        guard let best = gaps.max(by: { ($0.1 - $0.0) < ($1.1 - $1.0) }),
+              (best.1 - best.0) >= 40 else { return nil }
+
+        // Cap the per-drag travel so we approach the target gradually instead of
+        // overshooting past the hittable zone in a single jump. Center the capped
+        // segment within the gap.
+        let inset: CGFloat = 4
+        let gapLo = best.0 + inset
+        let gapHi = best.1 - inset
+        let gapMid = (gapLo + gapHi) / 2
+        let maxTravel: CGFloat = 140
+        let half = min((gapHi - gapLo) / 2, maxTravel / 2)
+        let lo = gapMid - half
+        let hi = gapMid + half
+        if direction >= 0 {
+            return (hi, lo) // finger bottom → top  (content scrolls up)
+        } else {
+            return (lo, hi) // finger top → bottom  (content scrolls down)
+        }
+    }
+
+    /// Scroll the page scroll view until `element` is hittable. Each attempt
+    /// chooses a drag confined to a gap between nested scroll views / tables /
+    /// keyboard so the gesture actually pans the PAGE (not a nested scroller).
+    /// Bounded attempts with short sleeps. Interacts with the REAL element
+    /// afterwards (caller's job).
+    ///
+    /// When `keyboardWillShow` is true (the caller is about to tap a text field
+    /// or text view, which summons the software keyboard), the element must be
+    /// scrolled fully ABOVE the keyboard zone — otherwise focusing it raises a
+    /// keyboard that immediately covers it, so the focusing tap reports "not
+    /// hittable". We reserve the bottom of the viewport (~where the keyboard
+    /// appears, measured at ~bottom 36% on these devices) and require the
+    /// element's maxY to sit above that line.
+    private func scrollToHittable(_ element: XCUIElement,
+                                  keyboardWillShow: Bool = false,
+                                  maxAttempts: Int = 16) {
+        guard element.exists else { return }
+        // A lingering keyboard covers the lower screen and makes low elements
+        // unhittable; clear it before deciding anything.
+        dismissKeyboard()
+
+        let scroller = pageScrollView()
+
+        // The y below which the keyboard will sit once shown. Fraction 0.60 of
+        // the page scroll frame keeps a safety margin above the measured
+        // keyboard top (~0.64 on iPhone SE).
+        func keyboardTopLine() -> CGFloat {
+            let f = scroller.frame
+            return f.minY + f.height * 0.60
+        }
+
+        // "Positioned" = hittable, and (if a keyboard will show) clear of the
+        // keyboard zone so it stays hittable after focusing.
+        func positioned() -> Bool {
+            guard element.isHittable else { return false }
+            if keyboardWillShow {
+                return element.frame.maxY <= keyboardTopLine()
+            }
+            return true
+        }
+
+        if positioned() { return }
+
+        let dragX: CGFloat = 0.5  // window-space x; centered, safe gaps are wide
+        let win = app.windows.firstMatch
+        func point(_ x: CGFloat, _ y: CGFloat) -> XCUICoordinate {
+            return win.coordinate(withNormalizedOffset: CGVector(dx: 0, dy: 0))
+                .withOffset(CGVector(dx: x, dy: y))
+        }
+
+        var stuckCount = 0
+
+        for _ in 0..<maxAttempts {
+            if positioned() { return }
+            guard element.exists else { return }
+
+            let pageFrame = scroller.frame
+            let elemMidY = element.frame.midY
+
+            // Target line we want the element's center near. Normally the
+            // viewport center; when a keyboard will show, aim higher so the whole
+            // element clears the keyboard zone.
+            let targetY = keyboardWillShow
+                ? pageFrame.minY + pageFrame.height * 0.32
+                : pageFrame.midY
+
+            // Direction: element below target → scroll content up (finger up);
+            // above target → content down.
+            let direction: CGFloat = elemMidY > targetY ? 1 : -1
+
+            let obstacles = dragObstacles(excluding: scroller)
+            guard let seg = safeDragSegment(in: pageFrame,
+                                            obstacles: obstacles,
+                                            direction: direction) else {
+                // No safe gap (rare). Fall back to a small swipe on the page
+                // scroll view element itself, which XCUITest routes to it.
+                if direction >= 0 { scroller.swipeUp() } else { scroller.swipeDown() }
+                Thread.sleep(forTimeInterval: 0.25)
+                continue
+            }
+
+            let startX = pageFrame.minX + pageFrame.width * dragX
+            // Real drag (longer press) so the scroll view pans deterministically
+            // rather than flicking unpredictably.
+            point(startX, seg.0).press(forDuration: 0.4,
+                thenDragTo: point(startX, seg.1))
+
+            Thread.sleep(forTimeInterval: 0.25)
+
+            // Detect a genuinely stuck scroll (content not moving). Require a few
+            // consecutive no-move drags before giving up so a single settling
+            // frame doesn't abort prematurely; the caller then surfaces a precise
+            // failure rather than us faking success.
+            let newMidY = element.exists ? element.frame.midY : elemMidY
+            if abs(newMidY - elemMidY) < 0.5 {
+                stuckCount += 1
+                if stuckCount >= 3 { break }
+            } else {
+                stuckCount = 0
+            }
         }
     }
 
@@ -431,6 +667,7 @@ class AutoPilotRunner {
         guard let keys = step.args?.keys else { return }
         let element = resolveElement(step.target)
         _ = element.waitForExistence(timeout: 3.0)
+        scrollToHittable(element, keyboardWillShow: true)
 
         // Map common key combos
         switch keys.lowercased() {
@@ -447,6 +684,8 @@ class AutoPilotRunner {
             element.tap()
             element.typeText(keys)
         }
+        // Don't leave a keyboard up to obscure later below-the-fold elements.
+        dismissKeyboard()
     }
 
     private func executeWait(_ step: Step) {
@@ -644,20 +883,37 @@ enum RunnerError: Error {
 // MARK: - XCUIElement Extension
 
 extension XCUIElement {
-    func clearText() {
-        guard let value = self.value as? String, !value.isEmpty else { return }
-        let deleteString = String(repeating: XCUIKeyboardKey.delete.rawValue, count: value.count)
-        // Select all then delete
-        self.tap()
-        self.press(forDuration: 1.0)
-        // Try select all
-        let selectAll = self.menuItems["Select All"]
-        if selectAll.exists {
-            selectAll.tap()
-            self.typeText(XCUIKeyboardKey.delete.rawValue)
-        } else {
-            // Just delete character by character
-            self.typeText(deleteString)
+    /// Clear all text from a focused text field / text view. The iOS edit menu
+    /// ("Select All") lives on the APP, not as a descendant of the element, so
+    /// the caller passes `app`. Falls back to backspacing after forcing the
+    /// cursor to the end, then verifies and retries — multi-line UITextViews
+    /// otherwise clear unreliably (a single tap leaves the cursor mid-text where
+    /// backspaces delete nothing).
+    func clearText(in app: XCUIApplication, attempts: Int = 3) {
+        for _ in 0..<attempts {
+            let value = (self.value as? String) ?? ""
+            let trimmed = value.trimmingCharacters(in: .newlines)
+            if trimmed.isEmpty { return }
+
+            self.tap()  // focus
+
+            // Preferred: long-press to raise the edit menu, then Select All +
+            // delete. Query the menu item on the APP (where it actually lives).
+            self.press(forDuration: 1.0)
+            let selectAll = app.menuItems["Select All"]
+            if selectAll.waitForExistence(timeout: 1.0) {
+                selectAll.tap()
+                Thread.sleep(forTimeInterval: 0.2)
+                self.typeText(XCUIKeyboardKey.delete.rawValue)
+            } else {
+                // Fallback: force the cursor to the very end by tapping the
+                // element's bottom-right corner, then backspace generously
+                // (cover the full length plus slack for newlines/autocorrect).
+                self.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.95)).tap()
+                let count = value.count + 4
+                self.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: count))
+            }
+            Thread.sleep(forTimeInterval: 0.2)
         }
     }
 }
