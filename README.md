@@ -20,7 +20,7 @@ autopilot-ios/
 
 ## Prerequisites
 
-- Xcode 15+
+- Xcode 16+ (CI builds with Xcode 16)
 - XcodeGen: `brew install xcodegen`
 
 ## Setup
@@ -69,7 +69,7 @@ The same JSON plan format runs across platforms:
 
 | Platform | Repo | Result |
 |---|---|---|
-| macOS | [`autopilot-macos`](https://github.com/jschwefel-CBB/autopilot-macos) | Full support |
+| macOS | [`autopilot-macos`](https://github.com/jschwefel-CBB/autopilot-macos) | 78 PASS (supports the 3 visual steps) |
 | iOS | this repo | 75 PASS + 3 SKIP |
 | Android | [`autopilot-android`](https://github.com/jschwefel-CBB/autopilot-android) | 75 PASS + 3 SKIP |
 
