@@ -19,16 +19,59 @@ struct PlanDefaults: Codable {
     let retryIntervalMs: Int?
 }
 
+/// Coverage tier of a step: cumulative happyPath ⊂ integrationSuite ⊂ tryToBreakIt.
+/// Mirrors autopilot-core's StepLevel. A LABEL — it does not invert pass/fail.
+enum StepLevel: String, Codable, CaseIterable {
+    case happyPath
+    case integrationSuite
+    case tryToBreakIt
+
+    var rank: Int {
+        switch self {
+        case .happyPath: return 0
+        case .integrationSuite: return 1
+        case .tryToBreakIt: return 2
+        }
+    }
+}
+
 struct Step: Codable {
     let id: String?
     let comment: String?
     let action: String?
+    /// REQUIRED coverage tier. Enforced at decode time to match autopilot-core:
+    /// a step with a missing or invalid `level` is rejected with a clear error.
+    let level: StepLevel
     let target: SelectorJSON?
     let args: ArgsJSON?
     let assert: AssertJSON?
 
     enum CodingKeys: String, CodingKey {
-        case id, comment, action, target, args, assert
+        case id, comment, action, level, target, args, assert
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(String.self, forKey: .id)
+        comment = try c.decodeIfPresent(String.self, forKey: .comment)
+        action = try c.decodeIfPresent(String.self, forKey: .action)
+        target = try c.decodeIfPresent(SelectorJSON.self, forKey: .target)
+        args = try c.decodeIfPresent(ArgsJSON.self, forKey: .args)
+        assert = try c.decodeIfPresent(AssertJSON.self, forKey: .assert)
+
+        let stepId = id ?? "?"
+        let valid = StepLevel.allCases.map(\.rawValue).joined(separator: ", ")
+        guard let raw = try c.decodeIfPresent(String.self, forKey: .level) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .level, in: c,
+                debugDescription: "step \(stepId): missing required field `level` — use \(valid)")
+        }
+        guard let parsed = StepLevel(rawValue: raw) else {
+            throw DecodingError.dataCorruptedError(
+                forKey: .level, in: c,
+                debugDescription: "step \(stepId): invalid level '\(raw)' — use \(valid)")
+        }
+        level = parsed
     }
 }
 
